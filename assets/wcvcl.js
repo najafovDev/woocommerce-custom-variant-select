@@ -527,42 +527,44 @@
 
     // PRB click – variation hazır değilse ilk tıkı iptal et, hazır olunca tek sefer daha tıkla
     (function(){
-      var prb = document.querySelector('#wc-stripe-express-checkout-element, .wcpay-payment-request-wrapper, .wc-stripe-payment-request-wrapper');
-      if (!prb) return;
-      prb.addEventListener('click', function(e){
-        if (prb.__wcvclReclicking) return; // döngüden kaç
-        var $active = $('.wcvcl-stepper').filter(function(){ return getQty($(this)) > 0; }).first();
-        if (!$active.length) return;
+      var prbs = prbCandidates();
+      if (!prbs.length) return;
+      prbs.forEach(function(prb){
+        prb.addEventListener('click', function(e){
+          if (prb.__wcvclReclicking) return; // döngüden kaç
+          var $active = $('.wcvcl-stepper').filter(function(){ return getQty($(this)) > 0; }).first();
+          if (!$active.length) return;
 
-        var q = getQty($active);
-        primeNativeFromStep($active, q);
+          var q = getQty($active);
+          primeNativeFromStep($active, q);
 
-        var $form = $('.variations_form.cart');
-        var tries = 0;
-        var ready = function(){ return !!$form.find('input.variation_id').val(); };
+          var $form = $('.variations_form.cart');
+          var tries = 0;
+          var ready = function(){ return !!$form.find('input.variation_id').val(); };
 
-        if (ready()){
-          // zaten hazır: bir mikro-tick sonra update
-          setTimeout(function(){ fireNativeUpdate(); }, 0);
-          return;
-        }
-
-        // hazır değil: bu tıkı iptal et, kısa polling ile hazır olunca yeniden tıkla
-        e.stopImmediatePropagation(); e.stopPropagation(); e.preventDefault();
-
-        var poll = function(){
-          tries++;
-          if (ready() || tries > 8){ // max ~400ms
-            prb.__wcvclReclicking = true;
-            setTimeout(function(){ fireNativeUpdate(); prb.click(); prb.__wcvclReclicking = false; }, 0);
+          if (ready()){
+            // zaten hazır: bir mikro-tick sonra update
+            setTimeout(function(){ fireNativeUpdate(); }, 0);
             return;
           }
-          // Woo varyasyon bulsun
-          try { $form.trigger('check_variations'); } catch(e){}
-          setTimeout(poll, 50);
-        };
-        poll();
-      }, {capture:true});
+
+          // hazır değil: bu tıkı iptal et, kısa polling ile hazır olunca yeniden tıkla
+          e.stopImmediatePropagation(); e.stopPropagation(); e.preventDefault();
+
+          var poll = function(){
+            tries++;
+            if (ready() || tries > 8){ // max ~400ms
+              prb.__wcvclReclicking = true;
+              setTimeout(function(){ fireNativeUpdate(); prb.click(); prb.__wcvclReclicking = false; }, 0);
+              return;
+            }
+            // Woo varyasyon bulsun
+            try { $form.trigger('check_variations'); } catch(e){}
+            setTimeout(poll, 50);
+          };
+          poll();
+        }, {capture:true});
+      });
     })();
   }
 
